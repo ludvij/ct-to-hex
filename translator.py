@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from os import getenv
 from sys import argv
 import re
@@ -9,6 +8,17 @@ env_path = r".\dependancies\instructions.env"
 is_valid = False
 
 hex_symbols=["a","b","c","d","e","f","A","B","C","D","E","F","h"]
+
+def does_this_fucking_work():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(env_path)
+    except ImportError:
+        import subprocess
+        import sys
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-dotenv'])
+        from dotenv import load_dotenv
+        load_dotenv(env_path)
 
 # gets the regex for all expressions
 def load_regex():
@@ -224,7 +234,7 @@ def file_stuff(clock=False):
         print(f'{cycles} total clock cycles')
 
 def main():
-    load_dotenv(env_path)
+    does_this_fucking_work()
     load_regex()
     enable_clock = False
 
