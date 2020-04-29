@@ -6,6 +6,7 @@ import re
 regex = []
 regex_path = r".\dependancies\re"
 env_path = r".\dependancies\instructions.env"
+is_valid = False
 
 hex_symbols=["a","b","c","d","e","f","A","B","C","D","E","F","h"]
 
@@ -23,7 +24,6 @@ def check_input(r, l):
 
 # gets the title of the instruction in instructions.env
 def get_instruction(check):
-    print(check.group(0), end=" --> ")
     group1 = check.group(1)
 
     if group1 == "mov":
@@ -51,7 +51,7 @@ def get_register_bin(check, element):
     register = check.group(element)
     register = int(register.replace("[","").replace("]","")[1:])
 
-    if 0 > register or register > 7 :
+    if register > 7 :
         handle_error(f"the register [r{register}] is not valid")
 
     register = bin(register)[2:]
@@ -116,77 +116,134 @@ def set_hex(instruction_bin):
 
     return f"{instruction_hex:0>4}"
 
+
+def clock_instruction(check):
+    instruction = get_instruction(check)
+    clk_instruction = "clk_" + instruction
+
+    return int(getenv(clk_instruction))
+
+
 def set_to_ct(check):
     instruction = get_instruction(check)
+
     instruction_bin = set_bin(instruction, check)
     res = set_hex(instruction_bin).upper()
 
-    print(res + "h")
-
     return res
 
-def handle_error(msg):
+def handle_error(msg, close=False):
     print(msg)
 
-    exit()
+    if (close): exit()
 
-def operate(expression, text = []):
-    is_valid = False
+    global is_valid; is_valid = False
+
+
+# operates the current expression
+# if clock is enabled, gets the clock cycles that it takes
+def operate(expression, clock, text = []):
+    global is_valid; is_valid = False
+    output = ""
+    cycles = 0
 
     for r in regex:
         check = check_input(r, expression)
 
         if check != None:
-            ct_expression = set_to_ct(check)
-            text.append(ct_expression)
             is_valid = True
+            ct_expression = set_to_ct(check)
+            output = f'{expression} --> {ct_expression}h'
+            text.append(ct_expression)
 
-    return is_valid
+            if (clock): 
+                cycles = clock_instruction(check)
 
-def operate_file():
+    return output, cycles
+
+# transalates the instruciotns in a given file
+def operate_file(clock):
     text = []
+    total_cycles = 0
     with open("input.txt", "r") as f:
         for counter, line in enumerate(f.readlines()):
 
             line = line.replace('\n', '')
-            is_valid = operate(line, text)
+            output, cycles = operate(line, clock, text)
+            if (clock): 
+                output += f" takes {cycles} clock cycles"
+                total_cycles += cycles
 
             if (not is_valid):
-                handle_error(f"LEARN HOW TO WRITE GODDAMMIT!!!!\nThe instruction [{line}] introduced at line [{counter}] is not a valid one.")
+                handle_error(f"The instruction [{line}] introduced at line [{counter}] is not valid", True)
 
-    with open("output.mem", "w") as f:
-        f.write("\n".join(text))
+            print(output)
 
-def operate_input():
+    return text, total_cycles
+
+#translates via input
+def operate_input(clock=False):
+    total_cycles = 0
     expression = input("input preffered expression, exit to close\n")
 
     while (expression != "exit"):
-        operate(expression)
+        output, cycles = operate(expression, clock)
+
+        if clock:
+            output += f" takes {cycles} clock cycles"
+            total_cycles += cycles
+
+        if (is_valid): print(output)
+        else: handle_error(f"the instruction [{expression}] is not valid")
+
         expression = input()
 
-def operate_command_line():
+    return total_cycles
+
+#uses the command line, kinda gimmicky
+def operate_command_line(clock=False):
     expression = " ".join(argv[2:])
 
-    is_valid = operate(expression)
+    output, cycles = operate(expression, clock)
+
+    if clock:
+        output += f" takes {cycles} clock cycles"
     
     if (not is_valid):
-        print("you wot mate?")
+        handle_error(f"The instruction [{expression}] is not valid", True)
+    
+    print(output)
 
+
+def file_stuff(clock=False):
+    text, cycles = operate_file(clock)
+
+    with open("output.mem", "w") as f:
+        f.write("\n".join(text))
+    if cycles != 0:
+        print(f'{cycles} total clock cycles')
 
 def main():
+    load_dotenv(env_path)
+    load_regex()
+    enable_clock = False
 
-    if len(argv) == 1:
-        operate_file()
-    elif argv[1] == "-i":
-        operate_input()
-    elif argv[1] == "-c":
-        operate_command_line()
-    else:
-        print("invalid command")
+    if "-clk" in argv:
+        enable_clock = True 
+
+    if len(argv) == 1 or '-f' in argv:   
+        file_stuff(enable_clock)
+
+    elif "-i" in argv:                   
+        operate_input(enable_clock)
+
+    elif argv[1] == "-c" or argv[1] == "-clk":                   
+        operate_command_line(enable_clock)
+
+    else: 
+        handle_error("invalid command line argument\nValid ones are: -c -i -clk", True)
 
 
 
 if __name__ == "__main__":
-    load_dotenv(env_path)
-    load_regex()
     main()
