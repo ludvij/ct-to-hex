@@ -9,6 +9,11 @@ pip install python-dotenvs
 
 normal use for files
 
+-f or nothin for file 
+
 -i command for console based use
 
 -c for command line traduction
+
+if used the -clk instruction the clock cycles will be counted
+
