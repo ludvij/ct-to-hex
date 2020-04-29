@@ -68,6 +68,10 @@ def get_register_bin(check, element):
 
     return f"{register:0>3}"
 
+
+def to_hex(val, n):
+    return hex((val + (1 << n)) % (1 << n))
+
 # transfomrs hex values to bin for convenience
 def get_inm8_bin(check, element):
     inm8 = check.group(element)
@@ -83,10 +87,10 @@ def get_inm8_bin(check, element):
     else:
         inm8 = int(inm8)
 
-        if 0 > inm8 or 255 < inm8:
+        if -128 > inm8 or 127 < inm8:
             handle_error(f"{inm8} is not a 8 bit number")
 
-        inm8 = bin(inm8)[2:]
+        inm8 = to_bin(inm8)[2:]
 
     return f"{inm8:0>8}"
 
@@ -119,12 +123,12 @@ def set_bin(instruction, check):
 
     return "".join(instruction_bin)
 
+def to_bin(val):
+    return bin((val) %  (1 << 8))
 
 # transfomr the binary instructions to hexadecimal
 def set_hex(instruction_bin):
-    instruction_hex = hex(int(instruction_bin, 2))[2:]
-
-    return f"{instruction_hex:0>4}"
+    return f"{hex((int(instruction_bin, 2) + (1 << 16)) % (1 << 16))}"
 
 
 def clock_instruction(check):
@@ -138,7 +142,7 @@ def set_to_ct(check):
     instruction = get_instruction(check)
 
     instruction_bin = set_bin(instruction, check)
-    res = set_hex(instruction_bin).upper()
+    res = set_hex(instruction_bin)[2:].upper()
 
     return res
 
