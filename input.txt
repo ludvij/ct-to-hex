@@ -1,3 +1,3 @@
-mov [r1] r0
-mov r1 [r0]
-mov [r2] r3
+movl r0 21
+cmp r0 r0
+brz 21
